@@ -1,0 +1,28 @@
+# docker compose up --build   →  web page on http://localhost:8501, API docs on http://localhost:8000/docs
+services:
+  api:
+    build: .
+    image: docsort-ai
+    env_file: .env                     # GEMINI_API_KEY (optional: without it documents are still sorted)
+    ports:
+      - "127.0.0.1:8000:8000"          # local machine only
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  ui:
+    image: docsort-ai
+    command: ["streamlit", "run", "ui/streamlit_app.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
+    environment:
+      API_URL: http://api:8000
+      PYTHONPATH: /app
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
